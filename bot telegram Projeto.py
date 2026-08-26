@@ -3,7 +3,7 @@ import pandas as pd
 import datetime
 
 
-bot = telebot.TeleBot('8849004768:AAHYsSTmqsO2XAcrlpg205JAtjVz-0P5Afg')
+bot = telebot.TeleBot('PRIVATE TOKEN')
 
 
 @bot.message_handler(commands=['start', 'menu'])
