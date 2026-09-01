@@ -2,7 +2,6 @@ import telebot
 import pandas as pd
 import datetime
 
-
 bot = telebot.TeleBot('PRIVATE TOKEN')
 
 
@@ -11,12 +10,13 @@ def responder(mensagem):
     texto = '''Olá, esse é o menu de opções, o que você deseja fazer?
 /opcao0 para caso nunca tenha usado o bot
 /opcao1 para mostrar saldo
-/opcao2 para mostrar gastos que teve no mês
+/opcao2 para mostrar gastos que teve no mês ou meses anteriores
 /opcao3 para adicionar saldo
 /opcao4 para registrar uma despesa
-/opcao5 para analise das despesas e histórico
 /opcao6 para ver a sua planilha
-
+/opcao7 corrigir um valor enviado errado
+/opcao8 fazer uma analise dos gastos mensais
+/opcao9 área de investimentos
 '''
     bot.reply_to(mensagem, texto)
 
@@ -45,22 +45,21 @@ def opcao1(mensagem):
 
 @bot.message_handler(commands=['opcao2'])
 def opcao2(mensagem):
+    def mostrar_gastos(mensagem):
+        texto=''
+        mês= mensagem.text.replace('/', '')
+        bot.send_message(mensagem.chat.id, "Esses foram seus gastos:")
+        for i in range(len(planilha_df[" "])):
+            gasto=planilha_df[" "][i]
+            valor_do_gasto=planilha_df.loc[planilha_df[" "]==gasto,mês].values[0]
+            texto=texto+ f"{gasto}: R$ {valor_do_gasto:.2f}\n"
+        bot.send_message(mensagem.chat.id,texto)
     #ler na planilha e mostrar. (CHECK)
     nome=mensagem.from_user.first_name
     planilha_df=pd.read_excel(f"{nome}.xlsx")
     numero_do_mês=datetime.datetime.fromtimestamp(mensagem.date).month
-    meses=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"]
-    mês=meses[numero_do_mês-1]
-    planilha_df[[f'{mês}']]
-#a opção 2 tá errada, precisamos ler a planilha
-    for i in range(0,len(finanças)):
-        
-        x=planilha_df[['finanças[mês][' '][i]']]
-        texto1=f"Você gastou {x} com {finanças[' '][i]}"
-        texto2=f"No mês {mês} você gastou com:"
-        texto2=texto2+\ntexto1
-    
-    bot.send_message(mensagem.chat.id, f"{texto2}")
+    mensagem=bot.send_message(mensagem.chat.id, "De qual mês você quer saber os gastos ? \n/Janeiro \n/Fevereiro \n/Março \n/Abril \n/Maio \n/Junho \n/Julho \n/Agosto \n/Setembro \n/Outubro \n/Novembro \n/Dezembro")
+    bot.register_next_step_handler(mensagem,mostrar_gastos)
 
 @bot.message_handler(commands=['opcao3'])
 def opcao3(mensagem):
@@ -94,7 +93,7 @@ def processar_saldo(mensagem):
 @bot.message_handler(commands=['opcao4'])
 def opcao4(mensagem):
     texto='''Digite qual foi seu gasto:
-/Saude
+/Saúde
 /Comida
 /Uber
 /Gasolina
@@ -117,37 +116,86 @@ def despesas(mensagem):
     numero_do_mês=datetime.datetime.fromtimestamp(mensagem.date).month
     meses=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"]
     mês=meses[numero_do_mês-1]
-    
-    bot.send_message(mensagem.chat.id,f'Qual foi a sua despesa com {gasto}')
-    valor_gasto = mensagem.text.replace('')
 
-    planilha_df.loc[planilha_df[" "] == f"{mês}", f"{gasto}"]=planilha_df.loc[planilha_df[" "] == f"{mês}", f"{gasto}"]- valor_gasto
 
-    gasto = mensagem.text.replace('/', '')
-    bot.send_message(mensagem.chat.id,f'Qual foi a sua despesa com {gasto}')
-    #'''Agora, vamos fazer o seguinte: Ler a planilha do cara, e alterar os dados de gastos para qual ele gastou.'''
-    posicao=finanças[" "].index(gasto)
-    mes=datetime.datetime.fromtimestamp(mensagem.date).month
-    #'''Vamos fazer um if e else para garantir que conseguimos abrir ou não a planilha da pessoa'''
 
     
+    def valor_despesa(mensagem):
+        valor_gasto = mensagem.text.replace('R$','').replace('-', '').strip()
+        valor_gasto=int(valor_gasto)
+    
+        planilha_df.loc[planilha_df[" "] == f"{gasto}", f"{mês}"]=planilha_df.loc[planilha_df[" "] == f"{gasto}", f"{mês}"]- valor_gasto
 
+        planilha_df.loc[planilha_df[" "] == "Saldo final", f"{mês}"]=planilha_df.loc[planilha_df[" "] == "Saldo final", f"{mês}"]- valor_gasto
+        '''Essa linha aqui em cima é para o Saldo Final'''
+        Saldo_final=planilha_df.loc[planilha_df[" "] == "Saldo final", f"{mês}"].values[0]
+        bot.send_message(mensagem.chat.id,f'Computamos na planilha seu gasto com {gasto}')
+        bot.send_message(mensagem.chat.id,f'Seu saldo atual é {Saldo_final}')
+        planilha_df.to_excel(f"{nome}.xlsx", index=False)
+    
 
-@bot.message_handler(commands=['opcao5'])
-def opcao5(mensagem):
-    texto='''
-/opcao51 Saber despesa de meses passados
-/opcao52 Comparar despesas de mes em mes
-/opcao53 Para ter acesso ao seu histórico
-
-'''
-    bot.send_message(mensagem.chat.id, texto)
+    mensagem=bot.send_message(mensagem.chat.id,f'Qual foi a sua despesa com {gasto}. Favor digite o valor positivo \nExemplo: R$1000')
+    bot.register_next_step_handler(mensagem,valor_despesa)
 
     
-@bot.message_handler(commands=['opcao51'])
-def opcao51(mensagem):
-    texto='''Digite qual foi seu gasto:
-/Saude
+
+
+
+'''@bot.message_handler(commands=['opcao6'])
+def opcao6(mensagem):
+    #enviar planilha'''
+
+@bot.message_handler(commands=['opcao7'])#a opção está muito errada, não sei corrigir ela, vou estudar cálculo.
+def corrigindo_erro(mensagem):
+    def descobrir_erro(mensagem,mês):
+            gasto=mensagem.text.replace('/','')
+            if (gasto=='Saldo_depositado'):
+                gasto='Saldo depositado'
+                nome=mensagem.from_user.first_name
+                planilha_df=pd.read_excel(f"{nome}.xlsx")
+                saldo_antigo=planilha_df.loc[planilha_df[' ']=="Saldo depositado",f"{mês}"].values[0]
+                mensagem=bot.send_message(mensagem.chat.id,f"Esse é saldo que estava antes de você querer alterar. Você tem certeza que quer trocar ?\n/Sim.\n/Não.")
+                bot.register_next_step_handler(mensagem,validar_resposta)
+                valor_para_trocar=bot.register_next_step_handler(mensagem,valor_correto)
+                planilha_df.loc[planilha_df[' ']==["Saldo depositado",f"{mês}"]]=valor_para_trocar
+                planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]=valor_para_trocar
+                '''Agora, vamos corrigir, pegar os valores de despesa e tirar do valor de Saldo final.'''
+                planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]=planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]-planilha_df.loc[planilha_df[' ']==["Academia",f"{mês}"]]
+                planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]=planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]-planilha_df.loc[planilha_df[' ']==["Uber",f"{mês}"]]
+                planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]=planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]-planilha_df.loc[planilha_df[' ']==["Saúde",f"{mês}"]]
+                planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]=planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]-planilha_df.loc[planilha_df[' ']==["Streaming",f"{mês}"]]
+                planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]=planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]-planilha_df.loc[planilha_df[' ']==["Igreja",f"{mês}"]]
+                planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]=planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]-planilha_df.loc[planilha_df[' ']==["Lazer",f"{mês}"]]
+                planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]=planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]-planilha_df.loc[planilha_df[' ']==["Roupa",f"{mês}"]]
+                planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]=planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]-planilha_df.loc[planilha_df[' ']==["Comida",f"{mês}"]]
+
+                
+                saldo_final=planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]].values[0]
+                bot.send_message(mensagem.chat.id,f"Então, o seu saldo final foi {saldo_final}")
+                
+                planilha_df.to_excel(f"{nome}.xlsx",index=False)
+                
+
+                
+            else:
+                nome=mensagem.from_user.first_name
+                planilha_df=pd.read_excel(f"{nome}.xlsx")
+                despesa_antiga=planilha_df.loc[planilha_df[' ']==f"{gasto}",f"{mês}"].values[0]
+                mensagem=bot.send_message(mensagem.chat.id,f"Esse é saldo que estava antes de você querer alterar. Você tem certeza que quer trocar ?\n/Sim.\n/Não.")
+                bot.register_next_step_handler(mensagem,validar_resposta)
+                valor_para_trocar=bot.register_next_step_handler(mensagem,valor_correto)
+                planilha_df.loc[planilha_df[' ']==[f"{gasto}",f"{mês}"]]=valor_para_trocar
+                planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]=planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]+despesa_antiga
+                planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]=planilha_df.loc[planilha_df[' ']==["Saldo final",f"{mês}"]]-valor_para_trocar
+                
+                planilha_df.to_excel(f"{nome}.xlsx",index=False)
+    
+    def descobrir_mês(mensagem):
+        mês= mensagem.text.replace('/', '')
+        texto=f'''Perfeito, então foi no mês {mês}, foi um erro em qual estrutura ?
+/Saldo_depositado
+
+/Saúde
 /Comida
 /Uber
 /Gasolina
@@ -156,16 +204,22 @@ def opcao51(mensagem):
 /Roupa
 /Streaming
 /Igreja
-/Despesa_adicional
-'''
-    mensagem=bot.send_message(mensagem.chat.id, texto)
-    bot.register_next_step_handler(mensagem,descobrindo_gasto)
-def descobrindo_gasto(mensagem):
-    gasto = mensagem.text.replace('/', '')
+/Despesa_adicional'''
+        bot.send_message(mensagem.chat.id,texto)
+        bot.register_next_step_handler(mensagem,descobrir_erro,mês)
+
     
     
-    texto=f'''
-Aperte em qual mês você quer saber o seu gasto com {gasto}
+    def validar_resposta(mensagem):
+        resposta=mensagem.text.replace('/', '')
+        if (resposta=='Sim'):
+            mensagem=bot.send_message(mensagem.chat.id, "Qual valor deve ser colocado então ?")
+        else:
+            mensagem=bot.send_message(mensagem.chat.id, "Certo, então, para reiniciar o bot aperte no start.\n/start")
+    def valor_correto(mensagem):
+        return mensagem.text.replace('R$', '')
+        
+    texto='''Que pena que você cometeu um erro, vamos corrigir. Seu erro foi em que mês ?
 /Janeiro
 /Fevereiro
 /Março
@@ -175,46 +229,25 @@ Aperte em qual mês você quer saber o seu gasto com {gasto}
 /Julho
 /Agosto
 /Setembro
-/Outubro
+ /Outubro
 /Novembro
-/Dezembro
-'''
+/Dezembro'''
+        
     mensagem=bot.send_message(mensagem.chat.id, texto)
-    bot.register_next_step_handler(mensagem,mostrando_gasto)
-    def mostrando_gasto(mensagem):
-        mês=mensagem.text.replace('/', '')
-        '''Vamos fazer aqui o seguinte: Abrir a planilha no modo read do excel, acharmos printamos na conversa.'''
-        nome=mensagem.from_user.first_name
-        for i in range(0,len(finanças[" "])):
-            if gasto==finanças[" "][i]:
-                posição_gasto=i
-        for i in range(0,len(finanças)):
-            if mês==finanças[i]:
-                posição_mês=i
-            
-        planilha_df=pd.read_excel(f'{nome}.xlsx')
+    bot.register_next_step_handler(mensagem,descobrir_mês)
     
-        print(planilha_df[[posição_gasto][posição_mês]])
-        bot.send_message(mensagem.chat.id,planilha_df[[f'{gasto}'][f'{mês}']] )
     
-
-
-'''@bot.message_handler(commands=['opcao6'])
-def opcao6(mensagem):
-    #enviar planilha'''
-
-
-
-
-
-
-
+                
+                
+                
+                
+                
 def cadastro(mensagem):
     email=mensagem.text
     bot.send_message(mensagem.chat.id, f"Seu email é {email}")
     ''' saber nome da pessoa por id'''
     finanças={
-        " ":["Saldo depositado","Saldo final","Academia","Uber","Saúde","Streaming","Igreja","Roupa","Lazer","Observações"],
+        " ":["Saldo depositado","Saldo final","Academia","Uber","Saúde","Streaming","Igreja","Roupa","Lazer","Observações","Comida","Gasolina","Despesas adicionais"],
         "Janeiro":[0,0,0,0,0,0,0,0,0,0],
         "Fevereiro":[0,0,0,0,0,0,0,0,0,0],
         "Março":[0,0,0,0,0,0,0,0,0,0],
@@ -234,4 +267,3 @@ def cadastro(mensagem):
 
         
 bot.polling()
-
