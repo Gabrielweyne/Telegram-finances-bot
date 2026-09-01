@@ -1,6 +1,8 @@
 import telebot
 import pandas as pd
 import datetime
+import matplotlib.pyplot as plt
+
 
 bot = telebot.TeleBot('PRIVATE TOKEN')
 
@@ -265,5 +267,36 @@ def cadastro(mensagem):
     planilha_df=pd.DataFrame(finanças)
     planilha_df.to_excel(f"{nome}.xlsx",index=False)
 
-        
+    
+
+
+
+@bot.message_handler(commands=['opcao8'])
+def opcao8 (mensagem):
+    #aqui vamos montar diversos gráficos para apresentar as despesas.
+    texto='Escolha entre as opções \n/opcao81 Comparação entre os gastos de um mês \n/opcao82 Comparação de um gasto em vários meses'
+    bot.send_message(mensagem.chat.id,texto)
+    
+@bot.message_handler(commands=['opcao81'])
+def opcao81(mensagem):
+    def descobrir_mês_e_enviar_imagem(mensagem):
+            mês=mensagem.text.replace('/', '')
+            gastos=["Academia","Uber","Saúde","Streaming","Igreja","Roupa","Lazer","Observações","Comida","Gasolina","Despesas adicionais"]
+            valores_gastos=[]
+            nome=mensagem.from_user.first_name
+            planilha_df=pd.read_excel(f"{nome}.xlsx")
+            for i in range(2, len(planilha_df)):
+                categoria = planilha_df[" "][i]
+                valor = planilha_df[mês][i]
+                valores_gastos.append(valor)
+                
+            barras=plt.bar(gastos,valores_gastos)
+            plt.barras_label(barras,labels=gastos)
+
+
+            
+    mensagem=bot.send_message(mensagem.chat.id,"De qual mês você quer saber o gasto ?  \n/Janeiro \n/Fevereiro \n/Março \n/Abril \n/Maio \n/Junho \n/Julho \n/Agosto \n/Setembro \n/Outubro \n/Novembro \n/Dezembro")
+    bot.register_next_step_handler(mensagem,descobrir_mês_e_enviar_imagem)
+    
+bot.polling()
 bot.polling()
