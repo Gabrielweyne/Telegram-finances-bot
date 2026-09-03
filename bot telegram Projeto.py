@@ -7,7 +7,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 
-bot = telebot.TeleBot('8849004768:AAHu_gZFwJ0IEw6V5cxcDiqvInJIyHQ0Xuk')
+bot = telebot.TeleBot('PRIVATE TOKEN')
 
 
 @bot.message_handler(commands=['start', 'menu'])
