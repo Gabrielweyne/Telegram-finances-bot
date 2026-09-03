@@ -1,10 +1,13 @@
+import io
 import telebot
 import pandas as pd
 import datetime
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 
-bot = telebot.TeleBot('PRIVATE TOKEN')
+bot = telebot.TeleBot('8849004768:AAHu_gZFwJ0IEw6V5cxcDiqvInJIyHQ0Xuk')
 
 
 @bot.message_handler(commands=['start', 'menu'])
@@ -281,22 +284,54 @@ def opcao8 (mensagem):
 def opcao81(mensagem):
     def descobrir_mês_e_enviar_imagem(mensagem):
             mês=mensagem.text.replace('/', '')
-            gastos=["Academia","Uber","Saúde","Streaming","Igreja","Roupa","Lazer","Observações","Comida","Gasolina","Despesas adicionais"]
+            gastos=["Academia","Uber","Saúde","Streaming","Igreja","Roupa","Lazer"]
             valores_gastos=[]
             nome=mensagem.from_user.first_name
             planilha_df=pd.read_excel(f"{nome}.xlsx")
             for i in range(2, len(planilha_df)):
-                categoria = planilha_df[" "][i]
                 valor = planilha_df[mês][i]
                 valores_gastos.append(valor)
                 
             barras=plt.bar(gastos,valores_gastos)
-            plt.barras_label(barras,labels=gastos)
-
-
+            plt.bar_label(barras)
+            buffer = io.BytesIO()
+            plt.savefig(buffer, format='png', bbox_inches='tight')
+            buffer.seek(0)
+            plt.close()
             
+            bot.send_photo(mensagem.chat.id, photo=buffer, caption=f"Aqui está o gráfico dos seus gastos de {mês}:")
     mensagem=bot.send_message(mensagem.chat.id,"De qual mês você quer saber o gasto ?  \n/Janeiro \n/Fevereiro \n/Março \n/Abril \n/Maio \n/Junho \n/Julho \n/Agosto \n/Setembro \n/Outubro \n/Novembro \n/Dezembro")
     bot.register_next_step_handler(mensagem,descobrir_mês_e_enviar_imagem)
-    
-bot.polling()
+            
+@bot.message_handler(commands=['opcao82'])
+def opcao82(mensagem):
+    num_mês=datetime.datetime.fromtimestamp(mensagem.date).month
+    meses=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"]
+    def enviar_grafico(mensagem,num_mês):
+        gasto=mensagem.text.replace('/', '').strip
+        nome=mensagem.from_user.first_name
+        planilha_df=pd.read_excel(f"{nome}.xlsx")
+        meses_planilha=[]
+        valores_meses=[]
+        coluna_gastos = planilha_df.columns[0]
+        
+        for i in range(0,num_mês):
+            valor=planilha_df.loc[planilha_df[coluna_gastos]==gasto,meses[i]].values[0]
+            meses_planilha.append(meses[i])
+            valores_meses.append(valor)
+        plt.figure()
+        plt.plot(meses_planilha,valores_meses,marker='o')
+        plt.xlabel('Meses')
+        plt.ylabel('Valores')
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png', bbox_inches='tight')
+        buffer.seek(0)
+        plt.close()
+        bot.send_photo(mensagem.chat.id, photo=buffer)
+
+    mensagem=bot.send_message(mensagem.chat.id,"Vamos comparar o seu gasto durante o ano. Qual gasto você quer saber ? \n/Academia \n/Uber \n/Saúde \n/Streaming \n/Igreja \n/Roupa \n/Lazer ")
+    bot.register_next_step_handler(mensagem,enviar_grafico,num_mês)
+
+        
+            
 bot.polling()
