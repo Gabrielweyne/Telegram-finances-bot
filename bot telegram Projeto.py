@@ -302,36 +302,82 @@ def opcao81(mensagem):
             bot.send_photo(mensagem.chat.id, photo=buffer, caption=f"Aqui está o gráfico dos seus gastos de {mês}:")
     mensagem=bot.send_message(mensagem.chat.id,"De qual mês você quer saber o gasto ?  \n/Janeiro \n/Fevereiro \n/Março \n/Abril \n/Maio \n/Junho \n/Julho \n/Agosto \n/Setembro \n/Outubro \n/Novembro \n/Dezembro")
     bot.register_next_step_handler(mensagem,descobrir_mês_e_enviar_imagem)
-            
-@bot.message_handler(commands=['opcao82'])
+
+
+@bot.message_handler(commands=['opcao82'])            
 def opcao82(mensagem):
-    num_mês=datetime.datetime.fromtimestamp(mensagem.date).month
-    meses=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"]
-    def enviar_grafico(mensagem,num_mês):
-        gasto=mensagem.text.replace('/', '').strip
-        nome=mensagem.from_user.first_name
-        planilha_df=pd.read_excel(f"{nome}.xlsx")
-        meses_planilha=[]
-        valores_meses=[]
-        coluna_gastos = planilha_df.columns[0]
+    num_mês = datetime.datetime.fromtimestamp(mensagem.date).month
+    
+    # Próximo passo enviado ao usuário
+    mensagem=bot.send_message(mensagem.chat.id,"Vamos comparar o seu gasto durante o ano. Qual gasto você quer saber? \n/Academia\n/Uber\n/Saúde\n/Streaming\n/Igreja\n/Roupa\n/Lazer")
+    bot.register_next_step_handler(mensagem, enviar_grafico, num_mês)
+
+
+    def enviar_grafico(mensagem, num_mês):
+        meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
+                 "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
         
-        for i in range(0,num_mês):
-            valor=planilha_df.loc[planilha_df[coluna_gastos]==gasto,meses[i]].values[0]
-            meses_planilha.append(meses[i])
+        gasto = mensagem.text.replace('/', '').strip()
+        nome = mensagem.from_user.first_name
+        
+        try:
+            planilha_df = pd.read_excel(f"{nome}.xlsx")
+        except FileNotFoundError:
+            bot.reply_to(mensagem, f"Não encontrei a planilha `{nome}.xlsx`.")
+            return
+
+        meses_planilha = []
+        valores_meses = []
+        coluna_gastos = planilha_df.columns[0]
+
+        planilha_df[coluna_gastos] = planilha_df[coluna_gastos].astype(str).str.strip().str.capitalize()
+        gasto_busca = gasto.capitalize()
+
+        for i in range(0, num_mês):
+            coluna_mes = meses[i]
+            if coluna_mes in planilha_df.columns:
+                filtro = planilha_df.loc[planilha_df[coluna_gastos] == gasto_busca, coluna_mes].values
+                
+                
+                valor = filtro[0] if len(filtro) > 0 else 0
+            else:
+                valor = 0
+
+            meses_planilha.append(coluna_mes)
             valores_meses.append(valor)
+
         plt.figure()
-        plt.plot(meses_planilha,valores_meses,marker='o')
+        plt.plot(meses_planilha, valores_meses, marker='o', color='b', linestyle='-')
+        plt.title(f"Gastos com {gasto_busca}")
         plt.xlabel('Meses')
-        plt.ylabel('Valores')
+        plt.ylabel('Valores (R$)')
+        plt.grid(True)
+
         buffer = io.BytesIO()
         plt.savefig(buffer, format='png', bbox_inches='tight')
         buffer.seek(0)
         plt.close()
+
         bot.send_photo(mensagem.chat.id, photo=buffer)
 
-    mensagem=bot.send_message(mensagem.chat.id,"Vamos comparar o seu gasto durante o ano. Qual gasto você quer saber ? \n/Academia \n/Uber \n/Saúde \n/Streaming \n/Igreja \n/Roupa \n/Lazer ")
-    bot.register_next_step_handler(mensagem,enviar_grafico,num_mês)
 
-        
-            
-bot.polling()
+@bot.message_handler(commands=['opcao9'])
+def opcao9 (mensagem):
+    mensagem=bot.send_message(mensagem.chat.id,"Olá, seja bem vindo a área de investimentos. Aqui vamos calcular de quanto tempo você irá atingir um patrimonio. Qual a sua meta ?")
+    bot.register_next_step_handler(mensagem,descobrindo_valor)
+    def descobrindo_valor(mensagem):
+        meta=mensagem.text.replace('R$', '').strip()
+        mensagem=bot.send_message(mensagem.chat.id,"Quanto você tem inicialmente ?")
+        bot.register_next_step_handler(mensagem,descobrindo_patrimonio_inicial)
+        def descobrindo_patrimonio_inicial(mensagem,meta):
+            patrimonio_inicial=mensagem.text.replace("R$",'').strip()
+            mensagem=bot.send_message(mensagem.chat.id,"Quanto você está disposto a investir mensalmente ?")
+            bot.register_next_step_handler(mensagem,descobrindo_valor_mensal,meta,patrimonio_inicial)
+            def descobrindo_valor_mensal(mensagem,meta,patrimonio_inicial):
+                valor_mensal=mensagem.text.replace("R$",'').strip()
+                i=0
+                while (patrimonio_inicial<meta):
+                    patrimonio_inicial=patrimonio_inicial+patrimonio_inicial*0.01+valor_mensal
+                    i=i+1
+                bot.send_message(mensagem.chat.id,f"Considerando um rendimento médio de 1% ao mês, em {i} meses você atingirá sua meta!")
+                #vamos agora montar um gráfico, daqueles de linha para mostrar até x anos o crescimento patrimonial dela.
