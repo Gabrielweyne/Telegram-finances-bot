@@ -18,10 +18,10 @@ def responder(mensagem):
 /opcao2 para mostrar gastos que teve no mês ou meses anteriores
 /opcao3 para adicionar saldo
 /opcao4 para registrar uma despesa
-/opcao6 para ver a sua planilha
-/opcao7 corrigir um valor enviado errado
-/opcao8 fazer uma analise dos gastos mensais
-/opcao9 área de investimentos
+/opcao5 para ver a sua planilha
+/opcao6 corrigir um valor enviado errado
+/opcao7 fazer uma analise dos gastos mensais
+/opcao8 área de investimentos
 '''
     bot.reply_to(mensagem, texto)
 
@@ -147,10 +147,10 @@ def despesas(mensagem):
 
 
 '''@bot.message_handler(commands=['opcao6'])
-def opcao6(mensagem):
+def opcao5(mensagem):
     #enviar planilha'''
 
-@bot.message_handler(commands=['opcao7'])#a opção está muito errada, não sei corrigir ela, vou estudar cálculo.
+@bot.message_handler(commands=['opcao6'])#a opção está muito errada, não sei corrigir ela, vou estudar cálculo.
 def corrigindo_erro(mensagem):
     def descobrir_erro(mensagem,mês):
             gasto=mensagem.text.replace('/','')
@@ -274,14 +274,14 @@ def cadastro(mensagem):
 
 
 
-@bot.message_handler(commands=['opcao8'])
-def opcao8 (mensagem):
+@bot.message_handler(commands=['opcao7'])
+def opcao7 (mensagem):
     #aqui vamos montar diversos gráficos para apresentar as despesas.
-    texto='Escolha entre as opções \n/opcao81 Comparação entre os gastos de um mês \n/opcao82 Comparação de um gasto em vários meses'
+    texto='Escolha entre as opções \n/opcao71 Comparação entre os gastos de um mês \n/opcao72 Comparação de um gasto em vários meses'
     bot.send_message(mensagem.chat.id,texto)
     
-@bot.message_handler(commands=['opcao81'])
-def opcao81(mensagem):
+@bot.message_handler(commands=['opcao71'])
+def opcao71(mensagem):
     def descobrir_mês_e_enviar_imagem(mensagem):
             mês=mensagem.text.replace('/', '')
             gastos=["Academia","Uber","Saúde","Streaming","Igreja","Roupa","Lazer"]
@@ -304,8 +304,8 @@ def opcao81(mensagem):
     bot.register_next_step_handler(mensagem,descobrir_mês_e_enviar_imagem)
 
 
-@bot.message_handler(commands=['opcao82'])            
-def opcao82(mensagem):
+@bot.message_handler(commands=['opcao2'])            
+def opcao72(mensagem):
     num_mês = datetime.datetime.fromtimestamp(mensagem.date).month
     
     # Próximo passo enviado ao usuário
@@ -361,8 +361,8 @@ def opcao82(mensagem):
         bot.send_photo(mensagem.chat.id, photo=buffer)
 
 
-@bot.message_handler(commands=['opcao9'])
-def opcao9 (mensagem):
+@bot.message_handler(commands=['opcao8'])
+def opcao8 (mensagem):
     mensagem=bot.send_message(mensagem.chat.id,"Olá, seja bem vindo a área de investimentos. Aqui vamos calcular de quanto tempo você irá atingir um patrimonio. Qual a sua meta ?")
     bot.register_next_step_handler(mensagem,descobrindo_valor)
     def descobrindo_valor(mensagem):
@@ -374,10 +374,58 @@ def opcao9 (mensagem):
             mensagem=bot.send_message(mensagem.chat.id,"Quanto você está disposto a investir mensalmente ?")
             bot.register_next_step_handler(mensagem,descobrindo_valor_mensal,meta,patrimonio_inicial)
             def descobrindo_valor_mensal(mensagem,meta,patrimonio_inicial):
+                patrimonio_inicial2=patrimonio_inicial
                 valor_mensal=mensagem.text.replace("R$",'').strip()
                 i=0
                 while (patrimonio_inicial<meta):
                     patrimonio_inicial=patrimonio_inicial+patrimonio_inicial*0.01+valor_mensal
                     i=i+1
                 bot.send_message(mensagem.chat.id,f"Considerando um rendimento médio de 1% ao mês, em {i} meses você atingirá sua meta!")
-                #vamos agora montar um gráfico, daqueles de linha para mostrar até x anos o crescimento patrimonial dela.
+                #vamos agora montar 2 gráficos, um daqueles de linha para mostrar até x anos o crescimento patrimonial dela, e outro sem os juros compostos, para ver a disparidade..
+                quantidade_anos=int ((i/12)+1)
+                data_mensagem = datetime.datetime.fromtimestamp(mensagem.date)
+                ano_da_mensagem = data_mensagem.year
+                anos=[]
+                valor_por_ano_tabela1=[]#essa será a tabela do juros compostos
+                valor_por_ano_tabela2=[]#essa será a tabela que não tem juros compostos
+                montante1=0
+                montante2=0
+                for j in range(0,quantidade_anos):
+                    
+                    anos.append(ano_da_mensagem+1)
+                    #Aqui precisa usar aquela formula do montante
+                    for t in range(1,13):
+                        valor_mensal=valor_mensal+valor_mensal*0.01+valor mensal
+                    montante1=montante1+(patrimonio_inicial2*1,1268)+valor_mensal #1,1268 porque a taxa de cada mês a 1% no final fica 12,68%
+                    valor_por_ano_tabela1.append(montante1)
+
+                    montante2=montante2+patrimonio_inicial2+(12*valor_mensal)
+                    
+                    valor_por_ano_tabela2.append(montante2)
+
+
+                plt.figure()
+                plt.plot(anos, valor_por_ano_tabela1, marker='o', color='b', linestyle='-')
+                plt.title(f"Crescimento de Patrimonio Anual")
+                plt.xlabel('Anos')
+                plt.ylabel('Valores (R$)')
+                plt.grid(True)
+
+                buffer = io.BytesIO()
+                plt.savefig(buffer, format='png', bbox_inches='tight')
+                buffer.seek(0)
+                plt.close()
+
+                bot.send_photo(mensagem.chat.id, photo=buffer)
+
+
+
+
+
+                plt.plot(eixo  x,eixo y)
+                plt.xlabel(nome do eixo x)
+                plt.ylabel(nome do eixo y)
+
+
+
+bot.polling()
